@@ -11,6 +11,8 @@ def booldialogbox(message):
         return 0
 
 import os, sys, subprocess
+import pexif,shutil
+import shapefile
 import numpy as np
 import Tkinter, Tkconstants, tkFileDialog, tkMessageBox
 from Tkinter import * 
@@ -31,6 +33,16 @@ base_pos_prompt = booldialogbox("Do you want enter position of base?")
 if base_pos_prompt == 1: # Taking Base coordinates, then enter csv else continue
     base_pos = tkFileDialog.askopenfilename(initialdir = "/",title = "Select Position csv files",filetypes = (("csv file","*.csv"),("all files","*.*")));
 
+    # Reading csv as pandas dataframe and then numpy array
+    # Lat, Long, Ele
+    csv_pos = pd.read_csv(base_pos)
+    csv_matrix = csv_pos.values
+    lat = csv_matrix[0][0]
+    long = csv_matrix[0][1]
+    ele = csv_matrix[0][2]
+    base_position = str(lat) + " " + str(long) + " " + str(ele)
+    print(base_position)
+
 # Is it static mode or kinematic mode
 mode_prompt = booldialogbox("Process with Static mode? Yes- Static mode, No- Kinematic mode")
 if mode_prompt == 1:
@@ -38,18 +50,9 @@ if mode_prompt == 1:
 else:
     mode = str(2) # Kinematic
 
-# Reading csv as pandas dataframe and then numpy array
-# Lat, Long, Ele
-csv_pos = pd.read_csv(base_pos)
-csv_matrix = csv_pos.values
-lat = csv_matrix[0][0]
-long = csv_matrix[0][1]
-ele = csv_matrix[0][2]
-base_position = str(lat) + " " + str(long) + " " + str(ele)
-print(base_position)
 
 # Setting executable path files
-exe_path = 'src'
+exe_path = 'src/2.4.3'
 conv_file = os.path.join(exe_path,'CONVBIN.exe')
 post_file = os.path.join(exe_path,'rnx2rtkp.exe')
 
@@ -63,7 +66,7 @@ basezip.extractall(base_extract)
 basezip.close()
 
 # Runnning base converter
-run_base_converter = subprocess.Popen( [conv_file,  os.path.join(base_extract, basename(base_extract)[:-4] + ".ubx"), "-r", "ubx"] )
+run_base_converter = subprocess.Popen( [conv_file,  os.path.join(base_extract, basename(base_extract)[:-4] + ".ubx"), "-r", "ubx", "-v", "3.03"] )
 run_base_converter.wait()
 
 print(base_extract, base_extract[:-4] + ".ubx")
@@ -77,7 +80,7 @@ for rov in rover_zip:
     print(os.path.join(rover_extract, rover_extract[:-4] + ".ubx"))
 
     # Running rover converter
-    run_rover_converter = subprocess.Popen( [conv_file, os.path.join(rover_extract, basename(rover_extract)[:-4] + ".ubx"), "-r", "ubx"] )
+    run_rover_converter = subprocess.Popen( [conv_file, os.path.join(rover_extract, basename(rover_extract)[:-4] + ".ubx"), "-r", "ubx", "-v", "3.03"] )
     run_rover_converter.wait()
 
     # Running Post Processing
@@ -87,10 +90,6 @@ for rov in rover_zip:
         run_rover_converter = subprocess.Popen( [post_file, os.path.join(rover_extract, basename(rover_extract)[:-4] + ".obs"),
         os.path.join(base_extract, basename(base_extract)[:-4] + ".obs"), 
         os.path.join(base_extract, basename(base_extract)[:-4] + ".nav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".gnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".hnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".lnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".qnav"),
         "-o", os.path.join(rover_extract, basename(rover_extract)[:-4] + ".pos"),
         "-c", "on", 
         "-h", "on",
@@ -100,10 +99,6 @@ for rov in rover_zip:
         run_rover_converter = subprocess.Popen( [post_file, os.path.join(rover_extract, basename(rover_extract)[:-4] + ".obs"),
         os.path.join(base_extract, basename(base_extract)[:-4] + ".obs"), 
         os.path.join(base_extract, basename(base_extract)[:-4] + ".nav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".gnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".hnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".lnav"),
-        os.path.join(base_extract, basename(base_extract)[:-4] + ".qnav"),
         "-o", os.path.join(rover_extract, basename(rover_extract)[:-4] + ".pos"),
         "-l", [base_position],
         "-c", "on",
